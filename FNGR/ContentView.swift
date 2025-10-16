@@ -8,6 +8,7 @@
 import SwiftUI
 import SwiftData
 
+
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var items: [Item]
@@ -30,85 +31,18 @@ struct ContentView: View {
     var body: some View {
         TabView {
             // Grid Tab
-            let columns = Array(repeating: GridItem(.flexible()), count: 3)
-            ScrollView {
-                LazyVGrid(columns: columns, spacing: 5) {
-                    ForEach(0..<min(tileCount, profileData.count), id: \.self) { index in
-                        ZStack(alignment: .bottom) {
-                            Image("\(index % 7)")
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 120, height: 120)
-                                .background(Color.gray.opacity(0.2))
-                                .clipShape(RoundedRectangle(cornerRadius: 5))
-                            
-                            HStack(spacing: 0) {
-                                Text("\(profileData[index].age)")
-                                    .font(.caption)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 3)
-                                    .background(Color.black.opacity(0.6))
-                                
-                                Text(profileData[index].name)
-                                    .font(.caption)
-                                    .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 3)
-                                    .background(Color.black.opacity(0.6))
-                            }
-                        }
-                        .onAppear {
-                            if index == tileCount - 1 {
-                                tileCount += 30
-                            }
-                        }
-                    }
+            GridView(tileCount: $tileCount, profileData: profileData, tileCountBinding: $tileCount)
+                .tabItem {
+                    Image(systemName: "square.grid.2x2.fill")
+                    Text("Grid")
                 }
-                .padding()
-            }
-            .tabItem {
-                Image(systemName: "square.grid.2x2.fill")
-                Text("Grid")
-            }
             
             // Chat Tab
-            NavigationStack {
-                List(people, id: \.self) { person in
-                    NavigationLink(destination: {
-                        let messagesBinding = Binding<[String]>(
-                            get: { messagesDict[person, default: []] },
-                            set: { messagesDict[person] = $0 }
-                        )
-                        let currentMessageBinding = Binding<String>(
-                            get: { currentMessages[person, default: ""] },
-                            set: { currentMessages[person] = $0 }
-                        )
-                        ChatDetailView(
-                            person: person,
-                            messages: messagesBinding,
-                            currentMessage: currentMessageBinding
-                        )
-                    }) {
-                        HStack {
-                            Image("0")
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 40, height: 40)
-                                .clipShape(Circle())
-                                .overlay(Circle().stroke(Color.blue, lineWidth: 2))
-                                .background(Circle().fill(Color.gray.opacity(0.2)))
-                            Text(person)
-                        }
-                    }
+            ChatView(people: $people, messagesDict: $messagesDict, currentMessages: $currentMessages)
+                .tabItem {
+                    Image(systemName: "message.fill")
+                    Text("Chat")
                 }
-                .navigationTitle("Chats")
-            }
-            .tabItem {
-                Image(systemName: "message.fill")
-                Text("Chat")
-            }
             
             // Profile Tab
             NavigationStack {
@@ -193,54 +127,6 @@ struct ContentView: View {
                 modelContext.delete(items[index])
             }
         }
-    }
-}
-
-struct ChatDetailView: View {
-    let person: String
-    @Binding var messages: [String]
-    @Binding var currentMessage: String
-
-    var body: some View {
-        VStack {
-            ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 8) {
-                        ForEach(messages.indices, id: \.self) { idx in
-                            Text(messages[idx])
-                                .padding(10)
-                                .background(Color.blue.opacity(0.2))
-                                .cornerRadius(8)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .id(idx)
-                        }
-                    }
-                    .padding()
-                }
-                .onChange(of: messages.count) { _, _ in
-                    if !messages.isEmpty {
-                        proxy.scrollTo(messages.count - 1, anchor: .bottom)
-                    }
-                }
-            }
-            HStack {
-                TextField("Message", text: $currentMessage)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                Button {
-                    let trimmed = currentMessage.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !trimmed.isEmpty {
-                        messages.append(trimmed)
-                        currentMessage = ""
-                    }
-                } label: {
-                    Image(systemName: "paperplane.fill")
-                }
-                .padding(.leading, 4)
-            }
-            .padding([.horizontal, .bottom])
-        }
-        .navigationTitle(person)
-        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
